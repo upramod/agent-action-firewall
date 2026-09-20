@@ -4,15 +4,17 @@ export function evaluateAction(
   current: ActionContext,
   history: RecordedAction[],
 ): Evaluation {
+  // Only actions that actually executed are allowed to influence later policy.
+  // REVIEW and BLOCK events are attempts, not completed effects.
   const previouslyReadSensitive = history.some(
     (event) =>
-      event.decision !== "BLOCK" &&
+      event.decision === "ALLOW" &&
       event.sensitivity === "sensitive" &&
       isReadLike(event.action),
   );
 
   const previouslyUsedUntrustedInput = history.some(
-    (event) => event.decision !== "BLOCK" && event.provenance === "untrusted",
+    (event) => event.decision === "ALLOW" && event.provenance === "untrusted",
   );
 
   if (
