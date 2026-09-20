@@ -13,6 +13,22 @@ export class AgentActionFirewall {
     return evaluateAction(action, this.getHistory(action.sessionId));
   }
 
+  authorize(action: ActionContext, approved = false): Evaluation {
+    const evaluation = this.assess(action);
+
+    if (evaluation.decision === "REVIEW" && approved) {
+      const allowed = {
+        decision: "ALLOW" as const,
+        reason: "Human approval granted.",
+      };
+      this.record(action, allowed);
+      return allowed;
+    }
+
+    this.record(action, evaluation);
+    return evaluation;
+  }
+
   record(action: ActionContext, evaluation: Evaluation): void {
     const events = this.getHistory(action.sessionId);
     events.push({
@@ -28,33 +44,17 @@ export class AgentActionFirewall {
     run: () => Promise<T>,
     approved = false,
   ): Promise<{ decision: Decision; result?: T; reason: string }> {
-    const evaluation = this.assess(action);
+    const evaluation = this.authorize(action, approved);
 
-    if (evaluation.decision === "BLOCK") {
-      this.record(action, evaluation);
-      return { ...evaluation };
-    }
-
-    if (evaluation.decision === "REVIEW" && !approved) {
-      this.record(action, evaluation);
+    if (evaluation.decision !== "ALLOW") {
       return { ...evaluation };
     }
 
     const result = await run();
-    this.record(action, {
-      decision: "ALLOW",
-      reason:
-        evaluation.decision === "REVIEW"
-          ? "Human approval granted."
-          : evaluation.reason,
-    });
 
     return {
       decision: "ALLOW",
-      reason:
-        evaluation.decision === "REVIEW"
-          ? "Human approval granted."
-          : evaluation.reason,
+      reason: evaluation.reason,
       result,
     };
   }
