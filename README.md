@@ -8,7 +8,7 @@ An individual tool call can look harmless while the sequence around it is risky.
 - `REVIEW`
 - `BLOCK`
 
-The decision happens before the caller executes the protected tool.
+The enforcement path makes the decision before the protected callback runs.
 
 ## Example
 
@@ -27,9 +27,9 @@ flowchart LR
     A[Agent / Alexa+] --> B[Proposed tool action]
     B --> C[Agent Action Firewall MCP]
     C --> D[Policy engine]
-    D --> E[Session history]
+    D --> E[Trusted session history]
     D --> F{Decision}
-    F -->|ALLOW| G[Execute tool]
+    F -->|ALLOW| G[Execute protected callback]
     F -->|REVIEW| H[Human confirmation]
     F -->|BLOCK| I[Do not execute]
 ```
@@ -43,7 +43,7 @@ The policy uses observable runtime metadata:
 - privilege level
 - prior executed actions
 
-Denied or review-only attempts are recorded for audit but do not count as executed actions when later policy is evaluated.
+Denied or review-only attempts are retained for audit but do not count as executed actions when later policy is evaluated.
 
 ## MCP / Alexa+
 
@@ -51,10 +51,14 @@ The project exposes a real MCP server over Streamable HTTP using the official Mo
 
 The server provides:
 
-- `guard_action` - evaluates and records a proposed action
-- `clear_session` - clears a demo/test session
+- `guard_action` - authorization decision for integrations that enforce the result themselves
+- `execute_guarded_demo_action` - reference enforcement path that only runs its protected callback after `ALLOW`
 
-The MCP compatibility test explicitly connects using the `2025-11-25` protocol revision required by the Alexa+ track.
+There is deliberately no model-callable reset-history tool.
+
+For production-style integration, the host can bind session identity in the `x-agent-session-id` HTTP header. When present, this trusted transport value overrides any model-authored `sessionId` argument. Local demos may use the argument directly.
+
+The MCP compatibility test explicitly connects using protocol revision `2025-11-25`, the minimum required by the Alexa+ hackathon track.
 
 ## Run
 
@@ -79,8 +83,6 @@ Endpoint:
 http://127.0.0.1:3000/mcp
 ```
 
-You can inspect it with an MCP client or the MCP Inspector.
-
 ## Demo
 
 ```bash
@@ -95,7 +97,7 @@ ALLOW  | read_customer_records
 BLOCK  | upload_file
 ```
 
-The final tool callback is never invoked when the firewall returns `BLOCK`.
+The core execution-gate tests prove that the protected callback is never invoked when the firewall returns `BLOCK`.
 
 See [docs/DEMO.md](docs/DEMO.md) for the short hackathon demo flow.
 
@@ -108,10 +110,18 @@ The suite verifies:
 - risky external export after sensitive access is blocked
 - blocked tools are never called
 - review-only attempts do not become executed history
-- the MCP endpoint performs the multi-step blocking flow
+- MCP multi-step blocking works
+- trusted transport session identity defeats model-authored session switching
+- MCP reference execution does not run a blocked action
 - the MCP endpoint accepts protocol version `2025-11-25`
 
-GitHub Actions runs tests, TypeScript compilation, and the demo on every change.
+GitHub Actions runs tests, TypeScript compilation, the demo, and a Docker image build.
+
+## Security boundary
+
+`guard_action` is an authorization service. A caller that ignores its answer can still bypass an advisory integration.
+
+For actual enforcement, wrap the side-effecting operation with `AgentActionFirewall.execute(...)`, as demonstrated by `execute_guarded_demo_action`. Session identity should also come from trusted host or transport metadata rather than model-generated text.
 
 ## Scope
 
