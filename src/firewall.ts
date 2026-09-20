@@ -14,17 +14,7 @@ export class AgentActionFirewall {
   }
 
   authorize(action: ActionContext, approved = false): Evaluation {
-    const evaluation = this.assess(action);
-
-    if (evaluation.decision === "REVIEW" && approved) {
-      const allowed = {
-        decision: "ALLOW" as const,
-        reason: "Human approval granted.",
-      };
-      this.record(action, allowed);
-      return allowed;
-    }
-
+    const evaluation = this.resolveDecision(action, approved);
     this.record(action, evaluation);
     return evaluation;
   }
@@ -44,13 +34,18 @@ export class AgentActionFirewall {
     run: () => Promise<T>,
     approved = false,
   ): Promise<{ decision: Decision; result?: T; reason: string }> {
-    const evaluation = this.authorize(action, approved);
+    const evaluation = this.resolveDecision(action, approved);
 
     if (evaluation.decision !== "ALLOW") {
+      this.record(action, evaluation);
       return { ...evaluation };
     }
 
+    // Record an allowed action only after the protected callback succeeds.
+    // A failed callback did not create the side effect that future policy
+    // should reason about.
     const result = await run();
+    this.record(action, evaluation);
 
     return {
       decision: "ALLOW",
@@ -65,5 +60,21 @@ export class AgentActionFirewall {
 
   clear(sessionId: string): void {
     this.history.delete(sessionId);
+  }
+
+  private resolveDecision(
+    action: ActionContext,
+    approved: boolean,
+  ): Evaluation {
+    const evaluation = this.assess(action);
+
+    if (evaluation.decision === "REVIEW" && approved) {
+      return {
+        decision: "ALLOW",
+        reason: "Human approval granted.",
+      };
+    }
+
+    return evaluation;
   }
 }

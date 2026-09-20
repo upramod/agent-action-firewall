@@ -85,3 +85,30 @@ test("blocks external export after sensitive read and never executes tool", asyn
   assert.equal(result.decision, "BLOCK");
   assert.equal(called, false);
 });
+
+test("failed protected callbacks do not become executed history", async () => {
+  const firewall = new AgentActionFirewall();
+
+  await assert.rejects(
+    firewall.execute(
+      action({
+        action: "read_customer_records",
+        sensitivity: "sensitive",
+      }),
+      async () => {
+        throw new Error("upstream read failed");
+      },
+    ),
+    /upstream read failed/,
+  );
+
+  const result = await firewall.execute(
+    action({
+      action: "upload_file",
+      destinationTrust: "external",
+    }),
+    async () => "uploaded",
+  );
+
+  assert.equal(result.decision, "ALLOW");
+});
