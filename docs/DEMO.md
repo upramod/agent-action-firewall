@@ -35,17 +35,17 @@ The sequence demonstrates:
 2. reading sensitive customer records is allowed
 3. uploading a file to an external destination is blocked
 
-Point out that the third action is not blocked because uploads are always forbidden. It is blocked because the current action crosses an external trust boundary after sensitive data was accessed earlier in the same session.
+Point out that uploads are not globally forbidden. The third action is blocked because it crosses an external trust boundary after sensitive data was accessed earlier in the same session.
 
-## 4. Show MCP
+## 4. Show MCP enforcement
 
-Open the MCP Inspector against:
+Open an MCP client or Inspector against:
 
 ```text
 http://127.0.0.1:3000/mcp
 ```
 
-Call `guard_action` twice using the same `sessionId`.
+Use `execute_guarded_demo_action` twice with the same session identity.
 
 First call:
 
@@ -60,7 +60,7 @@ First call:
 }
 ```
 
-Expected: `ALLOW`.
+Expected: `ALLOW` and `executed=true`.
 
 Second call:
 
@@ -76,10 +76,14 @@ Second call:
 }
 ```
 
-Expected: `BLOCK`.
+Expected: `BLOCK` and `executed=false`.
 
-## 5. Close
+## 5. Show trusted session binding
 
-Show the execution-gate test in GitHub Actions and state:
+Explain that a production host can set `x-agent-session-id` as transport metadata. When present, the server ignores a model-authored session ID, preventing the agent from escaping history by choosing a new ID.
 
-> The protected tool is never invoked when the firewall blocks the action.
+## 6. Close
+
+Show the green GitHub Actions run and state:
+
+> The blocked action never reaches the protected callback.
