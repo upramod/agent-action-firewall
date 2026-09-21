@@ -12,6 +12,18 @@ Transport: Streamable HTTP
 
 No authentication is required for the hackathon demo endpoint.
 
+A simple deployment health check is also available at:
+
+```text
+https://agent-action-firewall.wonderfuldesert-89e7468a.westus2.azurecontainerapps.io/healthz
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
 The exposed demo tool performs no destructive or external side effect. It only simulates whether a protected callback would execute.
 
 ## Recommended test
