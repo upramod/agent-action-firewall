@@ -77,10 +77,11 @@ Start the MCP server:
 npm start
 ```
 
-Endpoint:
+Endpoints:
 
 ```text
 http://127.0.0.1:3000/mcp
+http://127.0.0.1:3000/healthz
 ```
 
 ## Demo
@@ -100,6 +101,14 @@ BLOCK  | upload_file
 The core execution-gate tests prove that the protected callback is never invoked when the firewall returns `BLOCK`.
 
 See [docs/DEMO.md](docs/DEMO.md) for the short hackathon demo flow.
+
+Submission package:
+
+- [Devpost submission draft](docs/DEVPOST_SUBMISSION.md)
+- [Judge testing instructions](docs/TESTING.md)
+- [Architecture notes](docs/ARCHITECTURE.md)
+- [Product feedback draft](docs/PRODUCT_FEEDBACK.md)
+- [Friction log](docs/FRICTION_LOG.md)
 
 ## Tests
 
